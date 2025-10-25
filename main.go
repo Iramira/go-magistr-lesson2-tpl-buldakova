@@ -18,10 +18,19 @@ type Validator struct {
 func (v *Validator) errorf(line int, format string, args ...interface{}) {
 	msg := fmt.Sprintf(format, args...)
 	if line > 0 {
-		errorMsg := fmt.Sprintf("%s:%d %s", v.filename, line, msg)
+		// Убираем префикс /tmp/ из имени файла
+		baseFilename := v.filename
+		if strings.HasPrefix(baseFilename, "/tmp/") {
+			baseFilename = baseFilename[5:]
+		}
+		errorMsg := fmt.Sprintf("%s:%d %s", baseFilename, line, msg)
 		v.errors = append(v.errors, errorMsg)
 	} else {
-		errorMsg := fmt.Sprintf("%s %s", v.filename, msg)
+		baseFilename := v.filename
+		if strings.HasPrefix(baseFilename, "/tmp/") {
+			baseFilename = baseFilename[5:]
+		}
+		errorMsg := fmt.Sprintf("%s %s", baseFilename, msg)
 		v.errors = append(v.errors, errorMsg)
 	}
 }
@@ -169,22 +178,22 @@ func (v *Validator) validateContainer(container *yaml.Node, containerNames map[s
 		}
 	}
 
-	// Проверяем только обязательные поля один раз
+	// Проверяем обязательные поля
 	if name, exists := fields["name"]; !exists {
 		v.errorf(container.Line, "name is required")
 	} else {
 		v.validateContainerName(name, containerNames)
 	}
 
-	if _, exists := fields["image"]; !exists {
+	if image, exists := fields["image"]; !exists {
 		v.errorf(container.Line, "image is required")
-	} else if image, exists := fields["image"]; exists {
+	} else {
 		v.validateImage(image)
 	}
 
-	if _, exists := fields["resources"]; !exists {
+	if resources, exists := fields["resources"]; !exists {
 		v.errorf(container.Line, "resources is required")
-	} else if resources, exists := fields["resources"]; exists {
+	} else {
 		v.validateResources(resources)
 	}
 
@@ -361,9 +370,9 @@ func (v *Validator) validateResourceRequirements(resources *yaml.Node, fieldPath
 
 			switch key.Value {
 			case "cpu":
-				v.validateCPU(value, "cpu")
+				v.validateCPU(value, fieldPath+".cpu")
 			case "memory":
-				v.validateMemory(value, "memory")
+				v.validateMemory(value, fieldPath+".memory")
 			default:
 				v.errorf(key.Line, "%s has unsupported resource '%s'", fieldPath, key.Value)
 			}
