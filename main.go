@@ -18,9 +18,13 @@ type Validator struct {
 func (v *Validator) errorf(line int, format string, args ...interface{}) {
 	msg := fmt.Sprintf(format, args...)
 	if line > 0 {
-		v.errors = append(v.errors, fmt.Sprintf("%s:%d %s", v.filename, line, msg))
+		errorMsg := fmt.Sprintf("%s:%d %s", v.filename, line, msg)
+		v.errors = append(v.errors, errorMsg)
+		fmt.Printf("DEBUG: Added error: %s\n", errorMsg) // Диагностика
 	} else {
-		v.errors = append(v.errors, fmt.Sprintf("%s %s", v.filename, msg))
+		errorMsg := fmt.Sprintf("%s %s", v.filename, msg)
+		v.errors = append(v.errors, errorMsg)
+		fmt.Printf("DEBUG: Added error: %s\n", errorMsg) // Диагностика
 	}
 }
 
@@ -461,13 +465,6 @@ func (v *Validator) validateAbsolutePath(path *yaml.Node, fieldPath string) {
 }
 
 func main() {
-	defer func() {
-		if r := recover(); r != nil {
-			fmt.Printf("PANIC: %v\n", r)
-			os.Exit(1)
-		}
-	}()
-
 	if len(os.Args) != 2 {
 		fmt.Printf("Usage: %s <yaml-file>\n", os.Args[0])
 		os.Exit(1)
@@ -488,22 +485,10 @@ func main() {
 
 	validator := &Validator{filename: filename}
 
-	// Проверяем что корневой узел парсится правильно
-	if len(root.Content) == 0 {
-		fmt.Printf("%s: empty YAML document\n", filename)
-		os.Exit(1)
-	}
-
 	for _, doc := range root.Content {
 		if doc.Kind == yaml.DocumentNode && len(doc.Content) > 0 {
 			validator.validateTopLevel(doc.Content[0])
 		}
-	}
-
-	// ВЫВОДИМ ОШИБКИ ДАЖЕ ЕСЛИ ИХ НЕТ - для диагностики
-	fmt.Printf("DEBUG: Total errors found: %d\n", len(validator.errors))
-	for i, err := range validator.errors {
-		fmt.Printf("DEBUG: Error %d: %s\n", i, err)
 	}
 
 	if len(validator.errors) > 0 {
