@@ -41,7 +41,7 @@ func (v *Validator) validateTopLevel(doc *yaml.Node) {
 		}
 	}
 
-	for field, expectedType := range requiredFields {
+	for _, field := range requiredFields {
 		if node, exists := fields[field]; !exists {
 			v.errorf(doc.Line, "%s is required", field)
 		} else {
