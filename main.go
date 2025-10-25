@@ -12,7 +12,7 @@ import (
 
 type Validator struct {
 	filename string
-	errors   []string
+	errors   []string //Новый код
 }
 
 func (v *Validator) errorf(line int, format string, args ...interface{}) {
@@ -20,11 +20,9 @@ func (v *Validator) errorf(line int, format string, args ...interface{}) {
 	if line > 0 {
 		errorMsg := fmt.Sprintf("%s:%d %s", v.filename, line, msg)
 		v.errors = append(v.errors, errorMsg)
-		fmt.Printf("DEBUG: Added error: %s\n", errorMsg) // Диагностика
 	} else {
 		errorMsg := fmt.Sprintf("%s %s", v.filename, msg)
 		v.errors = append(v.errors, errorMsg)
-		fmt.Printf("DEBUG: Added error: %s\n", errorMsg) // Диагностика
 	}
 }
 
