@@ -17,19 +17,11 @@ type Validator struct {
 
 func (v *Validator) errorf(line int, format string, args ...interface{}) {
 	msg := fmt.Sprintf(format, args...)
+	baseFilename := strings.TrimPrefix(v.filename, "/tmp/")
 	if line > 0 {
-		// Убираем префикс /tmp/ из имени файла
-		baseFilename := v.filename
-		if strings.HasPrefix(baseFilename, "/tmp/") {
-			baseFilename = baseFilename[5:]
-		}
 		errorMsg := fmt.Sprintf("%s:%d %s", baseFilename, line, msg)
 		v.errors = append(v.errors, errorMsg)
 	} else {
-		baseFilename := v.filename
-		if strings.HasPrefix(baseFilename, "/tmp/") {
-			baseFilename = baseFilename[5:]
-		}
 		errorMsg := fmt.Sprintf("%s %s", baseFilename, msg)
 		v.errors = append(v.errors, errorMsg)
 	}
@@ -202,10 +194,10 @@ func (v *Validator) validateContainer(container *yaml.Node, containerNames map[s
 	}
 
 	if readinessProbe, exists := fields["readinessProbe"]; exists {
-		v.validateProbe(readinessProbe, "readinessProbe")
+		v.validateProbe(readinessProbe)
 	}
 	if livenessProbe, exists := fields["livenessProbe"]; exists {
-		v.validateProbe(livenessProbe, "livenessProbe")
+		v.validateProbe(livenessProbe)
 	}
 }
 
@@ -283,9 +275,9 @@ func (v *Validator) validateContainerPort(port *yaml.Node) {
 	}
 }
 
-func (v *Validator) validateProbe(probe *yaml.Node, probeType string) {
+func (v *Validator) validateProbe(probe *yaml.Node) {
 	if probe.Kind != yaml.MappingNode {
-		v.errorf(probe.Line, "%s must be object", probeType)
+		v.errorf(probe.Line, "probe must be object")
 		return
 	}
 
@@ -301,11 +293,11 @@ func (v *Validator) validateProbe(probe *yaml.Node, probeType string) {
 	if httpGet, exists := fields["httpGet"]; !exists {
 		v.errorf(probe.Line, "httpGet is required")
 	} else {
-		v.validateHTTPGetAction(httpGet, probeType)
+		v.validateHTTPGetAction(httpGet)
 	}
 }
 
-func (v *Validator) validateHTTPGetAction(httpGet *yaml.Node, probeType string) {
+func (v *Validator) validateHTTPGetAction(httpGet *yaml.Node) {
 	if httpGet.Kind != yaml.MappingNode {
 		v.errorf(httpGet.Line, "httpGet must be object")
 		return
