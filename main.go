@@ -25,6 +25,7 @@ func (v *Validator) errorf(line int, format string, args ...interface{}) {
 }
 
 func (v *Validator) validateTopLevel(doc *yaml.Node) {
+	fmt.Printf("DEBUG: Starting top-level validation\n")
 	requiredFields := []string{"apiVersion", "kind", "metadata", "spec"}
 
 	fields := make(map[string]*yaml.Node)
@@ -55,6 +56,7 @@ func (v *Validator) validateTopLevel(doc *yaml.Node) {
 }
 
 func (v *Validator) validateMetadata(metadata *yaml.Node) {
+	fmt.Printf("DEBUG: Validating metadata\n")
 	if metadata.Kind != yaml.MappingNode {
 		v.errorf(metadata.Line, "metadata must be object")
 		return
@@ -87,6 +89,7 @@ func (v *Validator) validateMetadata(metadata *yaml.Node) {
 }
 
 func (v *Validator) validateSpec(spec *yaml.Node) {
+	fmt.Printf("DEBUG: Validating spec\n")
 	if spec.Kind != yaml.MappingNode {
 		v.errorf(spec.Line, "spec must be object")
 		return
@@ -113,6 +116,7 @@ func (v *Validator) validateSpec(spec *yaml.Node) {
 }
 
 func (v *Validator) validatePodOS(podOS *yaml.Node) {
+	fmt.Printf("DEBUG: Validating OS: %s\n", podOS.Value)
 	if podOS.Kind == yaml.ScalarNode {
 		// Обработка когда os указан как строка
 		v.validateString(podOS, "os", []string{"linux", "windows"})
@@ -141,18 +145,21 @@ func (v *Validator) validatePodOS(podOS *yaml.Node) {
 }
 
 func (v *Validator) validateContainers(containers *yaml.Node) {
+	fmt.Printf("DEBUG: Validating containers\n")
 	if containers.Kind != yaml.SequenceNode {
 		v.errorf(containers.Line, "containers must be array")
 		return
 	}
 
 	containerNames := make(map[string]bool)
-	for _, container := range containers.Content {
+	for i, container := range containers.Content {
+		fmt.Printf("DEBUG: Validating container %d\n", i)
 		v.validateContainer(container, containerNames)
 	}
 }
 
 func (v *Validator) validateContainer(container *yaml.Node, containerNames map[string]bool) {
+	fmt.Printf("DEBUG: Validating single container\n")
 	if container.Kind != yaml.MappingNode {
 		v.errorf(container.Line, "container must be object")
 		return
@@ -164,6 +171,7 @@ func (v *Validator) validateContainer(container *yaml.Node, containerNames map[s
 			key := container.Content[i]
 			value := container.Content[i+1]
 			fields[key.Value] = value
+			fmt.Printf("DEBUG: Container field: %s\n", key.Value)
 		}
 	}
 
@@ -187,17 +195,21 @@ func (v *Validator) validateContainer(container *yaml.Node, containerNames map[s
 	}
 
 	if ports, exists := fields["ports"]; exists {
+		fmt.Printf("DEBUG: Found ports\n")
 		v.validatePorts(ports)
 	}
 
 	if readinessProbe, exists := fields["readinessProbe"]; exists {
+		fmt.Printf("DEBUG: Found readinessProbe\n")
 		v.validateProbe(readinessProbe, "readinessProbe")
 	}
 	if livenessProbe, exists := fields["livenessProbe"]; exists {
+		fmt.Printf("DEBUG: Found livenessProbe\n")
 		v.validateProbe(livenessProbe, "livenessProbe")
 	}
 
 	if resources, exists := fields["resources"]; exists {
+		fmt.Printf("DEBUG: Found resources\n")
 		v.validateResources(resources)
 	}
 }
@@ -277,6 +289,7 @@ func (v *Validator) validateContainerPort(port *yaml.Node) {
 }
 
 func (v *Validator) validateProbe(probe *yaml.Node, probeType string) {
+	fmt.Printf("DEBUG: Validating %s\n", probeType)
 	if probe.Kind != yaml.MappingNode {
 		v.errorf(probe.Line, "%s must be object", probeType)
 		return
@@ -288,6 +301,7 @@ func (v *Validator) validateProbe(probe *yaml.Node, probeType string) {
 			key := probe.Content[i]
 			value := probe.Content[i+1]
 			fields[key.Value] = value
+			fmt.Printf("DEBUG: %s field: %s\n", probeType, key.Value)
 		}
 	}
 
@@ -299,6 +313,7 @@ func (v *Validator) validateProbe(probe *yaml.Node, probeType string) {
 }
 
 func (v *Validator) validateHTTPGetAction(httpGet *yaml.Node, probeType string) {
+	fmt.Printf("DEBUG: Validating %s httpGet\n", probeType)
 	if httpGet.Kind != yaml.MappingNode {
 		v.errorf(httpGet.Line, "httpGet must be object")
 		return
@@ -310,6 +325,7 @@ func (v *Validator) validateHTTPGetAction(httpGet *yaml.Node, probeType string) 
 			key := httpGet.Content[i]
 			value := httpGet.Content[i+1]
 			fields[key.Value] = value
+			fmt.Printf("DEBUG: httpGet field: %s = %s\n", key.Value, value.Value)
 		}
 	}
 
@@ -322,13 +338,13 @@ func (v *Validator) validateHTTPGetAction(httpGet *yaml.Node, probeType string) 
 	if port, exists := fields["port"]; !exists {
 		v.errorf(httpGet.Line, "port is required")
 	} else {
-		// ВРЕМЕННЫЙ ВЫВОД ДЛЯ ОТЛАДКИ
 		fmt.Printf("DEBUG: Checking %s port: %s (line %d)\n", probeType, port.Value, port.Line)
 		v.validatePortNumber(port, "port")
 	}
 }
 
 func (v *Validator) validateResources(resources *yaml.Node) {
+	fmt.Printf("DEBUG: Validating resources\n")
 	if resources.Kind != yaml.MappingNode {
 		v.errorf(resources.Line, "resources must be object")
 		return
@@ -340,6 +356,7 @@ func (v *Validator) validateResources(resources *yaml.Node) {
 			key := resources.Content[i]
 			value := resources.Content[i+1]
 			fields[key.Value] = value
+			fmt.Printf("DEBUG: Resources field: %s = %s\n", key.Value, value.Value)
 		}
 	}
 
