@@ -355,10 +355,15 @@ func (v *Validator) validateResourceRequirements(resources *yaml.Node, fieldPath
 		return
 	}
 
+	// ДИАГНОСТИКА - НАЧАЛО
+	fmt.Printf("DEBUG: Validating resource requirements at line %d for path %s\n", resources.Line, fieldPath)
+
 	for i := 0; i < len(resources.Content); i += 2 {
 		if i+1 < len(resources.Content) {
 			key := resources.Content[i]
 			value := resources.Content[i+1]
+
+			fmt.Printf("DEBUG: Resource field '%s' at line %d, value: '%s'\n", key.Value, key.Line, value.Value)
 
 			switch key.Value {
 			case "cpu":
@@ -370,6 +375,7 @@ func (v *Validator) validateResourceRequirements(resources *yaml.Node, fieldPath
 			}
 		}
 	}
+	// ДИАГНОСТИКА - КОНЕЦ
 }
 
 func (v *Validator) validateCPU(cpu *yaml.Node, fieldPath string) {
@@ -378,11 +384,20 @@ func (v *Validator) validateCPU(cpu *yaml.Node, fieldPath string) {
 		return
 	}
 
+	// ДИАГНОСТИКА - НАЧАЛО
+	fmt.Printf("DEBUG: Validating CPU '%s' at line %d for field %s\n", cpu.Value, cpu.Line, fieldPath)
+
 	// Убираем кавычки если они есть
 	cleanedValue := strings.Trim(cpu.Value, `"`)
+	fmt.Printf("DEBUG: Cleaned CPU value '%s'\n", cleanedValue)
+
 	if _, err := strconv.Atoi(cleanedValue); err != nil {
+		fmt.Printf("DEBUG: CPU validation failed: %v\n", err)
 		v.errorf(cpu.Line, "%s must be integer", fieldPath)
+	} else {
+		fmt.Printf("DEBUG: CPU validation passed\n")
 	}
+	// ДИАГНОСТИКА - КОНЕЦ
 }
 
 func (v *Validator) validateMemory(memory *yaml.Node, fieldPath string) {
@@ -487,6 +502,12 @@ func main() {
 			// Если это не DocumentNode, валидируем напрямую
 			validator.validateTopLevel(doc)
 		}
+	}
+
+	// ДИАГНОСТИКА - вывод всех найденных ошибок
+	fmt.Printf("DEBUG: Total errors found: %d\n", len(validator.errors))
+	for i, err := range validator.errors {
+		fmt.Printf("DEBUG: Error %d: %s\n", i, err)
 	}
 
 	if len(validator.errors) > 0 {
