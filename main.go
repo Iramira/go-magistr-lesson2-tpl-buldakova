@@ -72,7 +72,7 @@ func (v *Validator) validateMetadata(metadata *yaml.Node) {
 	if name, exists := fields["name"]; !exists {
 		v.errorf(metadata.Line, "name is required")
 	} else {
-		v.validateString(name, "name", nil)
+		v.validateRequiredString(name, "name")
 	}
 
 	if namespace, exists := fields["namespace"]; exists {
@@ -169,8 +169,12 @@ func (v *Validator) validateContainer(container *yaml.Node, containerNames map[s
 
 	requiredFields := []string{"name", "image", "resources"}
 	for _, field := range requiredFields {
-		if _, exists := fields[field]; !exists {
+		if node, exists := fields[field]; !exists {
 			v.errorf(container.Line, "%s is required", field)
+		} else if field == "name" {
+			v.validateContainerName(node, containerNames)
+		} else if field == "image" {
+			v.validateImage(node)
 		}
 	}
 
@@ -201,6 +205,12 @@ func (v *Validator) validateContainer(container *yaml.Node, containerNames map[s
 func (v *Validator) validateContainerName(name *yaml.Node, containerNames map[string]bool) {
 	if name.Kind != yaml.ScalarNode {
 		v.errorf(name.Line, "name must be string")
+		return
+	}
+
+	// Проверка на пустую строку
+	if strings.TrimSpace(name.Value) == "" {
+		v.errorf(name.Line, "name is required")
 		return
 	}
 
@@ -284,11 +294,11 @@ func (v *Validator) validateProbe(probe *yaml.Node, probeType string) {
 	if httpGet, exists := fields["httpGet"]; !exists {
 		v.errorf(probe.Line, "httpGet is required")
 	} else {
-		v.validateHTTPGetAction(httpGet)
+		v.validateHTTPGetAction(httpGet, probeType)
 	}
 }
 
-func (v *Validator) validateHTTPGetAction(httpGet *yaml.Node) {
+func (v *Validator) validateHTTPGetAction(httpGet *yaml.Node, probeType string) {
 	if httpGet.Kind != yaml.MappingNode {
 		v.errorf(httpGet.Line, "httpGet must be object")
 		return
@@ -369,7 +379,9 @@ func (v *Validator) validateCPU(cpu *yaml.Node, fieldPath string) {
 		return
 	}
 
-	if _, err := strconv.Atoi(cpu.Value); err != nil {
+	// Убираем кавычки если они есть
+	cleanedValue := strings.Trim(cpu.Value, `"`)
+	if _, err := strconv.Atoi(cleanedValue); err != nil {
 		v.errorf(cpu.Line, "%s must be integer", fieldPath)
 	}
 }
@@ -380,9 +392,23 @@ func (v *Validator) validateMemory(memory *yaml.Node, fieldPath string) {
 		return
 	}
 
+	// Убираем кавычки если они есть
+	cleanedValue := strings.Trim(memory.Value, `"`)
 	memoryRegex := regexp.MustCompile(`^[0-9]+(Gi|Mi|Ki)$`)
-	if !memoryRegex.MatchString(memory.Value) {
-		v.errorf(memory.Line, "%s has invalid format '%s'", fieldPath, memory.Value)
+	if !memoryRegex.MatchString(cleanedValue) {
+		v.errorf(memory.Line, "%s has invalid format '%s'", fieldPath, cleanedValue)
+	}
+}
+
+func (v *Validator) validateRequiredString(node *yaml.Node, fieldPath string) {
+	if node.Kind != yaml.ScalarNode {
+		v.errorf(node.Line, "%s must be string", fieldPath)
+		return
+	}
+
+	// Проверка на пустую строку
+	if strings.TrimSpace(node.Value) == "" {
+		v.errorf(node.Line, "%s is required", fieldPath)
 	}
 }
 
