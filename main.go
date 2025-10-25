@@ -322,6 +322,8 @@ func (v *Validator) validateHTTPGetAction(httpGet *yaml.Node, probeType string) 
 	if port, exists := fields["port"]; !exists {
 		v.errorf(httpGet.Line, "port is required")
 	} else {
+		// ВРЕМЕННЫЙ ВЫВОД ДЛЯ ОТЛАДКИ
+		fmt.Printf("DEBUG: Checking %s port: %s (line %d)\n", probeType, port.Value, port.Line)
 		v.validatePortNumber(port, "port")
 	}
 }
