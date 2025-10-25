@@ -12,7 +12,7 @@ import (
 
 type Validator struct {
 	filename string
-	errors   []string //Новый код
+	errors   []string
 }
 
 func (v *Validator) errorf(line int, format string, args ...interface{}) {
@@ -20,13 +20,17 @@ func (v *Validator) errorf(line int, format string, args ...interface{}) {
 	if line > 0 {
 		errorMsg := fmt.Sprintf("%s:%d %s", v.filename, line, msg)
 		v.errors = append(v.errors, errorMsg)
+		fmt.Printf("DEBUG: Added error: %s\n", errorMsg) // Диагностика
 	} else {
 		errorMsg := fmt.Sprintf("%s %s", v.filename, msg)
 		v.errors = append(v.errors, errorMsg)
+		fmt.Printf("DEBUG: Added error: %s\n", errorMsg) // Диагностика
 	}
 }
 
 func (v *Validator) validateTopLevel(doc *yaml.Node) {
+	fmt.Printf("DEBUG: Starting validation for document at line %d\n", doc.Line)
+
 	requiredFields := []string{"apiVersion", "kind", "metadata", "spec"}
 
 	fields := make(map[string]*yaml.Node)
@@ -35,6 +39,7 @@ func (v *Validator) validateTopLevel(doc *yaml.Node) {
 			key := doc.Content[i]
 			value := doc.Content[i+1]
 			fields[key.Value] = value
+			fmt.Printf("DEBUG: Found field '%s' at line %d\n", key.Value, key.Line)
 		}
 	}
 
@@ -42,6 +47,7 @@ func (v *Validator) validateTopLevel(doc *yaml.Node) {
 		if node, exists := fields[field]; !exists {
 			v.errorf(doc.Line, "%s is required", field)
 		} else {
+			fmt.Printf("DEBUG: Validating field '%s' at line %d\n", field, node.Line)
 			switch field {
 			case "apiVersion":
 				v.validateString(node, "apiVersion", []string{"v1"})
@@ -57,6 +63,8 @@ func (v *Validator) validateTopLevel(doc *yaml.Node) {
 }
 
 func (v *Validator) validateMetadata(metadata *yaml.Node) {
+	fmt.Printf("DEBUG: Validating metadata at line %d\n", metadata.Line)
+
 	if metadata.Kind != yaml.MappingNode {
 		v.errorf(metadata.Line, "metadata must be object")
 		return
@@ -68,12 +76,14 @@ func (v *Validator) validateMetadata(metadata *yaml.Node) {
 			key := metadata.Content[i]
 			value := metadata.Content[i+1]
 			fields[key.Value] = value
+			fmt.Printf("DEBUG: Metadata field '%s' at line %d\n", key.Value, key.Line)
 		}
 	}
 
 	if name, exists := fields["name"]; !exists {
 		v.errorf(metadata.Line, "name is required")
 	} else {
+		fmt.Printf("DEBUG: Validating name '%s' at line %d\n", name.Value, name.Line)
 		v.validateRequiredString(name, "name")
 	}
 
@@ -89,6 +99,8 @@ func (v *Validator) validateMetadata(metadata *yaml.Node) {
 }
 
 func (v *Validator) validateSpec(spec *yaml.Node) {
+	fmt.Printf("DEBUG: Validating spec at line %d\n", spec.Line)
+
 	if spec.Kind != yaml.MappingNode {
 		v.errorf(spec.Line, "spec must be object")
 		return
@@ -100,6 +112,7 @@ func (v *Validator) validateSpec(spec *yaml.Node) {
 			key := spec.Content[i]
 			value := spec.Content[i+1]
 			fields[key.Value] = value
+			fmt.Printf("DEBUG: Spec field '%s' at line %d\n", key.Value, key.Line)
 		}
 	}
 
@@ -115,6 +128,8 @@ func (v *Validator) validateSpec(spec *yaml.Node) {
 }
 
 func (v *Validator) validatePodOS(podOS *yaml.Node) {
+	fmt.Printf("DEBUG: Validating OS at line %d, value: %s\n", podOS.Line, podOS.Value)
+
 	if podOS.Kind == yaml.ScalarNode {
 		// Обработка когда os указан как строка
 		v.validateString(podOS, "os", []string{"linux", "windows"})
@@ -143,13 +158,16 @@ func (v *Validator) validatePodOS(podOS *yaml.Node) {
 }
 
 func (v *Validator) validateContainers(containers *yaml.Node) {
+	fmt.Printf("DEBUG: Validating containers at line %d\n", containers.Line)
+
 	if containers.Kind != yaml.SequenceNode {
 		v.errorf(containers.Line, "containers must be array")
 		return
 	}
 
 	containerNames := make(map[string]bool)
-	for _, container := range containers.Content {
+	for i, container := range containers.Content {
+		fmt.Printf("DEBUG: Validating container %d at line %d\n", i, container.Line)
 		v.validateContainer(container, containerNames)
 	}
 }
@@ -166,6 +184,7 @@ func (v *Validator) validateContainer(container *yaml.Node, containerNames map[s
 			key := container.Content[i]
 			value := container.Content[i+1]
 			fields[key.Value] = value
+			fmt.Printf("DEBUG: Container field '%s' at line %d, value: %s\n", key.Value, key.Line, value.Value)
 		}
 	}
 
@@ -205,6 +224,8 @@ func (v *Validator) validateContainer(container *yaml.Node, containerNames map[s
 }
 
 func (v *Validator) validateContainerName(name *yaml.Node, containerNames map[string]bool) {
+	fmt.Printf("DEBUG: Validating container name '%s' at line %d\n", name.Value, name.Line)
+
 	if name.Kind != yaml.ScalarNode {
 		v.errorf(name.Line, "name must be string")
 		return
@@ -242,12 +263,15 @@ func (v *Validator) validateImage(image *yaml.Node) {
 }
 
 func (v *Validator) validatePorts(ports *yaml.Node) {
+	fmt.Printf("DEBUG: Validating ports at line %d\n", ports.Line)
+
 	if ports.Kind != yaml.SequenceNode {
 		v.errorf(ports.Line, "ports must be array")
 		return
 	}
 
-	for _, port := range ports.Content {
+	for i, port := range ports.Content {
+		fmt.Printf("DEBUG: Validating port %d at line %d\n", i, port.Line)
 		v.validateContainerPort(port)
 	}
 }
@@ -264,12 +288,14 @@ func (v *Validator) validateContainerPort(port *yaml.Node) {
 			key := port.Content[i]
 			value := port.Content[i+1]
 			fields[key.Value] = value
+			fmt.Printf("DEBUG: Port field '%s' at line %d, value: %s\n", key.Value, key.Line, value.Value)
 		}
 	}
 
 	if containerPort, exists := fields["containerPort"]; !exists {
 		v.errorf(port.Line, "containerPort is required")
 	} else {
+		fmt.Printf("DEBUG: Validating containerPort '%s' at line %d\n", containerPort.Value, containerPort.Line)
 		v.validatePortNumber(containerPort, "containerPort")
 	}
 
@@ -279,6 +305,8 @@ func (v *Validator) validateContainerPort(port *yaml.Node) {
 }
 
 func (v *Validator) validateProbe(probe *yaml.Node, probeType string) {
+	fmt.Printf("DEBUG: Validating %s at line %d\n", probeType, probe.Line)
+
 	if probe.Kind != yaml.MappingNode {
 		v.errorf(probe.Line, "%s must be object", probeType)
 		return
@@ -290,6 +318,7 @@ func (v *Validator) validateProbe(probe *yaml.Node, probeType string) {
 			key := probe.Content[i]
 			value := probe.Content[i+1]
 			fields[key.Value] = value
+			fmt.Printf("DEBUG: %s field '%s' at line %d\n", probeType, key.Value, key.Line)
 		}
 	}
 
@@ -312,6 +341,7 @@ func (v *Validator) validateHTTPGetAction(httpGet *yaml.Node, probeType string) 
 			key := httpGet.Content[i]
 			value := httpGet.Content[i+1]
 			fields[key.Value] = value
+			fmt.Printf("DEBUG: httpGet field '%s' at line %d, value: %s\n", key.Value, key.Line, value.Value)
 		}
 	}
 
@@ -324,6 +354,7 @@ func (v *Validator) validateHTTPGetAction(httpGet *yaml.Node, probeType string) 
 	if port, exists := fields["port"]; !exists {
 		v.errorf(httpGet.Line, "port is required")
 	} else {
+		fmt.Printf("DEBUG: Validating probe port '%s' at line %d\n", port.Value, port.Line)
 		v.validatePortNumber(port, "port")
 	}
 }
@@ -403,6 +434,8 @@ func (v *Validator) validateMemory(memory *yaml.Node, fieldPath string) {
 }
 
 func (v *Validator) validateRequiredString(node *yaml.Node, fieldPath string) {
+	fmt.Printf("DEBUG: Validating required string '%s' at line %d\n", node.Value, node.Line)
+
 	if node.Kind != yaml.ScalarNode {
 		v.errorf(node.Line, "%s must be string", fieldPath)
 		return
@@ -435,6 +468,8 @@ func (v *Validator) validateString(node *yaml.Node, fieldPath string, allowedVal
 }
 
 func (v *Validator) validatePortNumber(port *yaml.Node, fieldPath string) {
+	fmt.Printf("DEBUG: Validating port number '%s' at line %d for field %s\n", port.Value, port.Line, fieldPath)
+
 	if port.Kind != yaml.ScalarNode {
 		v.errorf(port.Line, "%s must be integer", fieldPath)
 		return
@@ -483,11 +518,22 @@ func main() {
 
 	validator := &Validator{filename: filename}
 
-	for _, doc := range root.Content {
-		if doc.Kind == yaml.DocumentNode && len(doc.Content) > 0 {
-			validator.validateTopLevel(doc.Content[0])
+	// Проверяем структуру документа
+	fmt.Printf("DEBUG: Document has %d content nodes\n", len(root.Content))
+	for i, doc := range root.Content {
+		fmt.Printf("DEBUG: Document node %d: Kind=%d, Line=%d\n", i, doc.Kind, doc.Line)
+		if doc.Kind == yaml.DocumentNode {
+			fmt.Printf("DEBUG: DocumentNode has %d content nodes\n", len(doc.Content))
+			if len(doc.Content) > 0 {
+				validator.validateTopLevel(doc.Content[0])
+			}
+		} else {
+			// Если это не DocumentNode, валидируем напрямую
+			validator.validateTopLevel(doc)
 		}
 	}
+
+	fmt.Printf("DEBUG: Total errors found: %d\n", len(validator.errors))
 
 	if len(validator.errors) > 0 {
 		for _, err := range validator.errors {
