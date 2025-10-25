@@ -25,12 +25,7 @@ func (v *Validator) errorf(line int, format string, args ...interface{}) {
 }
 
 func (v *Validator) validateTopLevel(doc *yaml.Node) {
-	requiredFields := map[string]string{
-		"apiVersion": "string",
-		"kind":       "string",
-		"metadata":   "object",
-		"spec":       "object",
-	}
+	requiredFields := []string{"apiVersion", "kind", "metadata", "spec"}
 
 	fields := make(map[string]*yaml.Node)
 	for i := 0; i < len(doc.Content); i += 2 {
@@ -47,9 +42,9 @@ func (v *Validator) validateTopLevel(doc *yaml.Node) {
 		} else {
 			switch field {
 			case "apiVersion":
-				v.validateString(node, field, []string{"v1"})
+				v.validateString(node, "apiVersion", []string{"v1"})
 			case "kind":
-				v.validateString(node, field, []string{"Pod"})
+				v.validateString(node, "kind", []string{"Pod"})
 			case "metadata":
 				v.validateMetadata(node)
 			case "spec":
@@ -119,7 +114,7 @@ func (v *Validator) validateSpec(spec *yaml.Node) {
 
 func (v *Validator) validatePodOS(podOS *yaml.Node) {
 	if podOS.Kind == yaml.ScalarNode {
-		// Handle case when os is specified as string directly
+		// Обработка когда os указан как строка
 		v.validateString(podOS, "os", []string{"linux", "windows"})
 		return
 	}
@@ -441,20 +436,20 @@ func (v *Validator) validateAbsolutePath(path *yaml.Node, fieldPath string) {
 
 func main() {
 	if len(os.Args) != 2 {
-		fmt.Fprintf(os.Stdout, "Usage: %s <yaml-file>\n", os.Args[0])
+		fmt.Printf("Usage: %s <yaml-file>\n", os.Args[0])
 		os.Exit(1)
 	}
 
 	filename := os.Args[1]
 	content, err := os.ReadFile(filename)
 	if err != nil {
-		fmt.Fprintf(os.Stdout, "%s: cannot read file: %v\n", filename, err)
+		fmt.Printf("%s: cannot read file: %v\n", filename, err)
 		os.Exit(1)
 	}
 
 	var root yaml.Node
 	if err := yaml.Unmarshal(content, &root); err != nil {
-		fmt.Fprintf(os.Stdout, "%s: cannot unmarshal YAML: %v\n", filename, err)
+		fmt.Printf("%s: cannot unmarshal YAML: %v\n", filename, err)
 		os.Exit(1)
 	}
 
