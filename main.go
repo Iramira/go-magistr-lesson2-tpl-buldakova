@@ -341,17 +341,17 @@ func (v *Validator) validateResources(resources *yaml.Node) {
 	}
 
 	if requests, exists := fields["requests"]; exists {
-		v.validateResourceRequirements(requests, "requests")
+		v.validateResourceRequirements(requests)
 	}
 
 	if limits, exists := fields["limits"]; exists {
-		v.validateResourceRequirements(limits, "limits")
+		v.validateResourceRequirements(limits)
 	}
 }
 
-func (v *Validator) validateResourceRequirements(resources *yaml.Node, fieldPath string) {
+func (v *Validator) validateResourceRequirements(resources *yaml.Node) {
 	if resources.Kind != yaml.MappingNode {
-		v.errorf(resources.Line, "%s must be object", fieldPath)
+		v.errorf(resources.Line, "resources must be object")
 		return
 	}
 
@@ -362,19 +362,19 @@ func (v *Validator) validateResourceRequirements(resources *yaml.Node, fieldPath
 
 			switch key.Value {
 			case "cpu":
-				v.validateCPU(value, fieldPath+".cpu")
+				v.validateCPU(value)
 			case "memory":
-				v.validateMemory(value, fieldPath+".memory")
+				v.validateMemory(value)
 			default:
-				v.errorf(key.Line, "%s has unsupported resource '%s'", fieldPath, key.Value)
+				v.errorf(key.Line, "resources has unsupported resource '%s'", key.Value)
 			}
 		}
 	}
 }
 
-func (v *Validator) validateCPU(cpu *yaml.Node, fieldPath string) {
+func (v *Validator) validateCPU(cpu *yaml.Node) {
 	if cpu.Kind != yaml.ScalarNode {
-		v.errorf(cpu.Line, "%s must be integer", fieldPath)
+		v.errorf(cpu.Line, "cpu must be integer")
 		return
 	}
 
@@ -383,29 +383,29 @@ func (v *Validator) validateCPU(cpu *yaml.Node, fieldPath string) {
 	if cpu.Tag == "!!str" {
 		// Это строка - проверяем, можно ли преобразовать в число
 		if _, err := strconv.Atoi(cpu.Value); err != nil {
-			v.errorf(cpu.Line, "%s must be integer", fieldPath)
+			v.errorf(cpu.Line, "cpu must be integer")
 		} else {
 			// Можно преобразовать в число, но это все равно строка - ошибка
-			v.errorf(cpu.Line, "%s must be integer", fieldPath)
+			v.errorf(cpu.Line, "cpu must be integer")
 		}
 		return
 	}
 
 	// Если это не строка, проверяем что это число
 	if cpu.Tag != "!!int" {
-		v.errorf(cpu.Line, "%s must be integer", fieldPath)
+		v.errorf(cpu.Line, "cpu must be integer")
 		return
 	}
 
 	// Проверяем, что значение является числом
 	if _, err := strconv.Atoi(cpu.Value); err != nil {
-		v.errorf(cpu.Line, "%s must be integer", fieldPath)
+		v.errorf(cpu.Line, "cpu must be integer")
 	}
 }
 
-func (v *Validator) validateMemory(memory *yaml.Node, fieldPath string) {
+func (v *Validator) validateMemory(memory *yaml.Node) {
 	if memory.Kind != yaml.ScalarNode {
-		v.errorf(memory.Line, "%s must be string", fieldPath)
+		v.errorf(memory.Line, "memory must be string")
 		return
 	}
 
@@ -413,7 +413,7 @@ func (v *Validator) validateMemory(memory *yaml.Node, fieldPath string) {
 	cleanedValue := strings.Trim(memory.Value, `"`)
 	memoryRegex := regexp.MustCompile(`^[0-9]+(Gi|Mi|Ki)$`)
 	if !memoryRegex.MatchString(cleanedValue) {
-		v.errorf(memory.Line, "%s has invalid format '%s'", fieldPath, cleanedValue)
+		v.errorf(memory.Line, "memory has invalid format '%s'", cleanedValue)
 	}
 }
 
