@@ -374,7 +374,7 @@ func (v *Validator) validateResourceRequirements(resources *yaml.Node) {
 
 func (v *Validator) validateCPU(cpu *yaml.Node) {
 	if cpu.Kind != yaml.ScalarNode {
-		v.errorf(cpu.Line, "cpu must be integer")
+		v.errorf(cpu.Line, "cpu must be int")
 		return
 	}
 
@@ -383,23 +383,23 @@ func (v *Validator) validateCPU(cpu *yaml.Node) {
 	if cpu.Tag == "!!str" {
 		// Это строка - проверяем, можно ли преобразовать в число
 		if _, err := strconv.Atoi(cpu.Value); err != nil {
-			v.errorf(cpu.Line, "cpu must be integer")
+			v.errorf(cpu.Line, "cpu must be int")
 		} else {
 			// Можно преобразовать в число, но это все равно строка - ошибка
-			v.errorf(cpu.Line, "cpu must be integer")
+			v.errorf(cpu.Line, "cpu must be int")
 		}
 		return
 	}
 
 	// Если это не строка, проверяем что это число
 	if cpu.Tag != "!!int" {
-		v.errorf(cpu.Line, "cpu must be integer")
+		v.errorf(cpu.Line, "cpu must be int")
 		return
 	}
 
 	// Проверяем, что значение является числом
 	if _, err := strconv.Atoi(cpu.Value); err != nil {
-		v.errorf(cpu.Line, "cpu must be integer")
+		v.errorf(cpu.Line, "cpu must be int")
 	}
 }
 
