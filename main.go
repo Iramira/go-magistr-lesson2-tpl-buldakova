@@ -355,10 +355,15 @@ func (v *Validator) validateResourceRequirements(resources *yaml.Node, fieldPath
 		return
 	}
 
+	// ВРЕМЕННАЯ ДИАГНОСТИКА
+	fmt.Printf("DEBUG: Validating %s at line %d\n", fieldPath, resources.Line)
+
 	for i := 0; i < len(resources.Content); i += 2 {
 		if i+1 < len(resources.Content) {
 			key := resources.Content[i]
 			value := resources.Content[i+1]
+
+			fmt.Printf("DEBUG: Found resource %s.%s = '%s' at line %d\n", fieldPath, key.Value, value.Value, value.Line)
 
 			switch key.Value {
 			case "cpu":
@@ -378,15 +383,22 @@ func (v *Validator) validateCPU(cpu *yaml.Node, fieldPath string) {
 		return
 	}
 
+	// ВРЕМЕННАЯ ДИАГНОСТИКА
+	fmt.Printf("DEBUG: Validating CPU '%s' at line %d\n", cpu.Value, cpu.Line)
+
 	// Ключевое исправление: проверяем, содержит ли значение кавычки
 	if strings.Contains(cpu.Value, `"`) {
+		fmt.Printf("DEBUG: CPU contains quotes - adding error\n")
 		v.errorf(cpu.Line, "%s must be integer", fieldPath)
 		return
 	}
 
 	// Проверяем, что значение является числом
 	if _, err := strconv.Atoi(cpu.Value); err != nil {
+		fmt.Printf("DEBUG: CPU is not integer - adding error\n")
 		v.errorf(cpu.Line, "%s must be integer", fieldPath)
+	} else {
+		fmt.Printf("DEBUG: CPU validation passed\n")
 	}
 }
 
@@ -492,6 +504,12 @@ func main() {
 			// Если это не DocumentNode, валидируем напрямую
 			validator.validateTopLevel(doc)
 		}
+	}
+
+	// ВРЕМЕННАЯ ДИАГНОСТИКА
+	fmt.Printf("DEBUG: Total errors: %d\n", len(validator.errors))
+	for i, err := range validator.errors {
+		fmt.Printf("DEBUG: Error %d: %s\n", i, err)
 	}
 
 	if len(validator.errors) > 0 {
